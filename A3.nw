@@ -162,25 +162,30 @@ check that it has an @ sign in the string, at \textit{minimum} (or
 
 <<USER>>=
 CREATE TABLE USER (
-Email VARCHAR(21,844) CHARACTER SET utf8 PRIMARY KEY CHECK Email LIKE "%@%",
-DateAdded DATETIME NOT NULL,
-NickName VARCHAR(21,844) CHARACTER SET utf8 UNIQUE,
-Profile VARCHAR(21,844) CHARACTER SET utf8);
+    Email VARCHAR(21,844) CHARACTER SET utf8 PRIMARY KEY
+        CHECK Email LIKE "%@%",
+    DateAdded DATETIME NOT NULL,
+    NickName VARCHAR(21,844) CHARACTER SET utf8 UNIQUE,
+    Profile VARCHAR(21,844) CHARACTER SET utf8
+);
 @
 
 \subsection{BOOK is an entity}
 <<BOOK>>=
-  CREATE TABLE BOOK (
-    BookID INT PRIMARY KEY AUTO_INCREMENT,
-    Title VARCHAR(255) NOT NULL,
-    Year INT CHECK (Year >= <<date of the Kish Tablet>> AND Year <= <<the current year>>),
-    NumRaters INT DEFAULT 0,
-    Rating DECIMAL(2,1) DEFAULT 0.0 CHECK (Rating >= 0.0 AND Rating <= 5.0)
-  );
+CREATE TABLE BOOK (
+  BookID INT PRIMARY KEY AUTO_INCREMENT,
+  Title VARCHAR(255) NOT NULL,
+  Year INT CHECK (Year >= <<date of the Kish Tablet>> AND
+                  Year <= <<the current year>>),
+  NumRaters INT DEFAULT 0,
+  Rating DECIMAL(2,1) DEFAULT 0.0
+      CHECK (Rating >= 0.0 AND Rating <= 5.0)
+);
 @
 
-Users obviously cannot read books that have not been written yet, so [[<<the
-current year>>]] is used to limit what can be inserted into the database.
+Users obviously cannot read books that have not been written yet, so
+[[<<the current year>>]] is used to limit what can be inserted into
+the database.
 
 <<the current year>>=
 YEAR(CURDATE())
@@ -196,22 +201,20 @@ so any books a user claims to have read should be more recent than this.
 
 \subsection{AUTHOR is an entity}
 <<AUTHOR>>=
-  CREATE TABLE AUTHOR (
+CREATE TABLE AUTHOR (
     AuthorID INT PRIMARY KEY AUTO_INCREMENT,
     Lastname VARCHAR(50) CHARACTER SET utf8,
     FirstName VARChar(50) CHARACTER SET utf8 NOT NULL,
     MiddleName VARCHAR(50) CHARACTER SET utf8
-  );
+);
 @
 
 \subsection{BOOK has AUTHOR}
-Books have one or more authors. This
-
 <<BOOKAUTHOR>>=
-  CREATE TABLE BOOKAUTHOR (
+CREATE TABLE BOOKAUTHOR (
     AuthorID INT FOREIGN KEY REFERENCES AUTHOR(AuthorID),
     BookID INT FOREIGN KEY REFERENCES BOOK(BookID)
-  );
+);
 @
 
 \subsection{USER reads BOOK}
@@ -229,11 +232,14 @@ READBOOK.Email = USER.Email]] whenever the trigger condition is satisfied.
 
 <<READBOOK>>=
 CREATE TABLE READBOOK (
-  BookID INT FOREIGN KEY REFERENCES BOOK(BookID) NOT NULL,
-  Email VARCHAR(...) FOREIGN KEY REFERENCES USER(Email) NOT NULL ON DELETE CASCADE,
-  DateRead DATE NOT NULL,
-  Rating INT(2) CHECK Rating >= 1 AND Rating <= 10 NOT NULL,
-  PRIMARY KEY (BookID, Email)) ENGINE=INNODB;
+    BookID INT FOREIGN KEY REFERENCES BOOK(BookID) NOT NULL,
+    Email VARCHAR(...) FOREIGN KEY REFERENCES USER(Email)
+        NOT NULL
+        ON DELETE CASCADE,
+    DateRead DATE NOT NULL,
+    Rating INT(2) CHECK Rating >= 1 AND Rating <= 10 NOT NULL,
+    PRIMARY KEY (BookID, Email)
+) ENGINE=INNODB;
 
 <<Update ratings in a BOOK on changes to BOOKTABLE>>
 @ 
@@ -247,8 +253,13 @@ remaining task is to then trigger a call to the user-defined [[CalculateRating]]
 aggregate function to update `BOOK.Rating` when this table is updated.
 
 <<Update ratings in BOOK on changes to BOOKTABLE>>=
-CREATE TRIGGER afterUpdateRow_recalculateBookRating AFTER UPDATE ON READBOOK FOR EACH ROW CalculateRating();
-CREATE TRIGGER afterInsertRow_recalculateBookRating AFTER INSERT ON READBOOK FOR EACH ROW CalculateRating();
-CREATE TRIGGER afterDeleteRow_recalculateBookRating AFTER DELETE ON READBOOK FOR EACH ROW CalculateRating();
+CREATE TRIGGER afterUpdateRow_recalculateBookRating
+    AFTER UPDATE ON READBOOK FOR EACH ROW CalculateRating();
+
+CREATE TRIGGER afterInsertRow_recalculateBookRating
+    AFTER INSERT ON READBOOK FOR EACH ROW CalculateRating();
+
+CREATE TRIGGER afterDeleteRow_recalculateBookRating
+    AFTER DELETE ON READBOOK FOR EACH ROW CalculateRating();
 @
 \end{document}
