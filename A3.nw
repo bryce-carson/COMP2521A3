@@ -1,0 +1,167 @@
+%% -*- mode: Poly-Noweb; noweb-code-mode: sql-mode; fill-column: 80; -*-
+% Copyright © 2023 Arandia, Bown, and Carson
+% See the LICENSE file for more copyright and licensing information.
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc} % Required for inputting international characters
+\usepackage[T1]{fontenc} % Output font encoding for international characters
+
+\usepackage{mathpazo} % Palatino font
+
+\usepackage{noweb}
+\pagestyle{noweb}
+\noweboptions{}
+
+\begin{document}
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\begin{titlepage} % Suppresses displaying the page number on the title page and the subsequent page counts as page 1
+  \newcommand{\HRule}{\rule{\linewidth}{0.5mm}} % Defines a new command for horizontal lines, change thickness here
+
+  \center % Centre everything on the page
+
+  %------------------------------------------------
+  %	Headings
+  %------------------------------------------------
+
+  \textsc{\LARGE Mount Royal University}\\[1.5cm] % Main heading such as the name of your university/college
+
+  \textsc{\Large COMP 2521 002}\\[0.5cm] % Major heading such as course name
+
+  \textsc{\large Data Modeling and Query Languages}\\[0.5cm] % Minor heading such as course title
+
+  %------------------------------------------------
+  %	Title
+  %------------------------------------------------
+
+  \HRule\\[0.4cm]
+
+  {\huge\bfseries Assignment Three}\\[0.4cm] % Title of your document
+
+  \HRule\\[1.5cm]
+
+  %------------------------------------------------
+  %	Author(s)
+  %------------------------------------------------
+
+  {\large\textit{Author}}\\
+  Zyrel \textsc{Arandia} % Your name
+
+  {\large\textit{Author}}\\
+  Andrew \textsc{Bown} % Your name
+
+  {\large\textit{Author}}\\
+  Bryce \textsc{Carson} % Your name
+
+  %------------------------------------------------
+  %	Date
+  %------------------------------------------------
+
+  \vfill\vfill\vfill % Position the date 3/4 down the remaining page
+
+  {\large\today} % Date, change the \today to a set date if you want to be precise
+
+  \vfill % Push the date up 1/4 of the remaining page
+
+\end{titlepage}
+
+%----------------------------------------------------------------------------------------
+\section{Introduction}
+The DDL for the assignment SQL is summarized in this top-level chunk. The tables
+are created in the order the referenced chunks are named. The parental chunk has
+the same name as the table in the database, but child chunks should have
+descriptive names (if any child chunks exist).
+
+The SQL server used is MariaDB. The [[<<MariaDB version>>]] used is contained in
+the chunk just referenced.
+
+Occasionally, throughout this document, chunk names may be repeated in SQL
+comments to ensure that the tangled SQL is readable without the literate
+document.
+
+<<MariaDB version>>=
+-- 10.3.39-MariaDB; as of 2023-12-02T23:11PM on macomydb.mtroyal.ca
+SELECT VERSION();
+@
+
+Overall, the SQL script to create the databse is outlined.
+
+<<A3.sql>>=
+<<DDL: tables>>
+@ 
+
+The file is not too complex.
+
+\section{DDL}
+<<DDL: tables>>=
+<<USER>>
+<<BOOK>>
+<<AUTHOR>>
+<<BOOKAUTHOR>>
+<<READBOOK>>
+<<WARNINGS table>>
+@
+
+\subsection{The USER table, or why email address validation is difficult for amateurs}
+<<USER>>=
+CREATE TABLE USER(PRIMARY KEY Email, DateAdded, NickName, Profile);
+-- Ensure email addresses are valid
+<<Ensure email addresses are valid>>
+@
+
+From the perspective of a software engineer, almost any string is a valid
+international email address. ASCII-only email addresses are also quite complex!
+A great video of a presentation on the topic is available
+\url[here]{https://www.youtube.com/watch?v=mrGfahzt-4Q} (the presentation was
+given by Dylan Beattie at NDC~\{~Oslo~\}). More technical information is
+contained in \url[this
+  archived]{https://ia902802.us.archive.org/10/items/uasg012endigital/UASG012-en-digital.pdf}
+document from the Universal Acceptance Steering Group of ICANN.
+
+\begin{quote}
+  In some cases it may be useful to assign both an EAI and a legacy address for a
+  mailbox. (See Downgrading, below.) In some cases there may be a straightforward
+  transliteration, such as борис@domain to boris@domain or 李伟@domain to
+  liwei@domain. In other cases, there may be no natural way to transliterate, and
+  the two names may have no obvious connection.
+\end{quote}
+
+Client-side and server-side validation of email addresses should be used;
+prevent malicious actors. Assuming that client-side validation of email
+addresses has been implemented properly, and that server-side validation has
+also occurred, what remains is to insert the email address into the database and
+check that it has an @ sign in the string, at \textit{minimum} (or
+\textit{maximum}, depending on personal engineering perspective).
+
+<<Ensure email addresses are valid>>=
+<<Define a server function to be triggered whenever a new user is created>>
+<<Whenever a user is created, call the defined function to validate email addresses>>
+@
+
+Performing the check is simple; query all user email addresses, and any that are
+invalid should be logged to a [[<<WARNINGS table>>]] for database administrator
+review.
+
+<<Define a server function to be triggered whenever a new user is created>>=
+<<Whenever a user is created, call the defined function to validate email addresses>>=
+@
+
+<<WARNINGS table>>=
+
+@ 
+
+\section{TODO}
+<<BOOK>>=
+<<AUTHOR>>=
+<<BOOKAUTHOR>>=
+<<READBOOK>>=
+@ 
+\END{document}
