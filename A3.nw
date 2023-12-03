@@ -8,8 +8,13 @@
 
 \documentclass[11pt]{article}
 
-\usepackage[utf8]{inputenc} % Required for inputting international characters
-\usepackage[T1]{fontenc} % Output font encoding for international characters
+\usepackage[russian, english]{babel}
+
+\babelfont{rm}{Noto Sans}
+\babelfont{sf}{Noto Sans}
+
+\usepackage{xeCJK}
+\setCJKmainfont{Noto Sans CJK SC}
 
 \usepackage{mathpazo} % Palatino font
 
@@ -170,7 +175,7 @@ Profile VARCHAR(21,844) CHARACTER SET utf8);
     Title VARCHAR(255) NOT NULL,
     Year INT CHECK (Year >= <<date of the Kish Tablet>> AND Year <= <<the current year>>),
     NumRaters INT DEFAULT 0,
-    Rating DECIMARL(2,1) DEFAULT 0.0 CHECK (Rating >= 0.0 AND Rating <= 5.0)
+    Rating DECIMAL(2,1) DEFAULT 0.0 CHECK (Rating >= 0.0 AND Rating <= 5.0)
   );
 @
 
