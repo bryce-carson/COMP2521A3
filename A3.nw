@@ -261,5 +261,13 @@ CREATE TRIGGER afterInsertRow_recalculateBookRating
 
 CREATE TRIGGER afterDeleteRow_recalculateBookRating
     AFTER DELETE ON READBOOK FOR EACH ROW CalculateRating();
+
+CREATE OR REPLACE PROCEDURE CalculateRating     
+    AS BEGIN        
+    UPDATE BOOK       
+    SET Rating = (SELECT AVG(Rating) FROM READBOOK WHERE BOOK.BookID = ReadBook.BookID),
+    SET NumRaters = (select COUNT(*) FROM READBOOK WHERE BOOK.BookID = ReadBook.BookID)       
+    WHERE BOOK.BookID = ReadBook.BookID;     
+    END;     
 @
 \end{document}
