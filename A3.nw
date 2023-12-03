@@ -13,6 +13,8 @@
 
 \usepackage{mathpazo} % Palatino font
 
+\usepackage{hyperref}
+
 \usepackage{noweb}
 \pagestyle{noweb}
 \noweboptions{}
@@ -120,10 +122,10 @@ CREATE TABLE USER(PRIMARY KEY Email, DateAdded, NickName, Profile);
 From the perspective of a software engineer, almost any string is a valid
 international email address. ASCII-only email addresses are also quite complex!
 A great video of a presentation on the topic is available
-\url[here]{https://www.youtube.com/watch?v=mrGfahzt-4Q} (the presentation was
+\href{https://www.youtube.com/watch?v=mrGfahzt-4Q}{here on YouTube} (the presentation was
 given by Dylan Beattie at NDC~\{~Oslo~\}). More technical information is
-contained in \url[this
-  archived]{https://ia902802.us.archive.org/10/items/uasg012endigital/UASG012-en-digital.pdf}
+contained in \href{https://ia902802.us.archive.org/10/items/uasg012endigital/UASG012-en-digital.pdf}{this
+  archived}
 document from the Universal Acceptance Steering Group of ICANN.
 
 \begin{quote}
@@ -164,4 +166,4 @@ review.
 <<BOOKAUTHOR>>=
 <<READBOOK>>=
 @ 
-\END{document}
+\end{document}
