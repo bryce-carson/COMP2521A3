@@ -235,7 +235,7 @@ READBOOK.Email = USER.Email]] whenever the trigger condition is satisfied.
     BookID INT FOREIGN KEY REFERENCES BOOK(BookID) NOT NULL,
     Email VARCHAR(...) FOREIGN KEY REFERENCES USER(Email) NOT NULL,
     DateRead DATE NOT NULL,
-    Rating INT(2) CHECK Rating >= 1 AND Rating <= 10 NOT NULL
-  );
+    Rating INT(2) CHECK Rating >= 1 AND Rating <= 10 NOT NULL,
+    PRIMARY KEY (BookID, Email)) ENGINE=INNODB;
 @ 
 \end{document}
