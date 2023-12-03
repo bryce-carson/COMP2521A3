@@ -216,9 +216,9 @@ so any books a user claims to have read should be more recent than this.
 <<AUTHOR>>=
   CREATE TABLE AUTHOR (
     AuthorID INT PRIMARY KEY AUTO_INCREMENT,
-    Lastname VARCHAR(50),
-    FirstName VARChar(50) NOT NULL,
-    MiddleName VARCHAR(50)
+    Lastname VARCHAR(50) CHARACTER SET utf8,
+    FirstName VARChar(50) CHARACTER SET utf8 NOT NULL,
+    MiddleName VARCHAR(50) CHARACTER SET utf8
   );
 @
 
