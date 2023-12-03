@@ -109,7 +109,6 @@ The file is not too complex.
 <<AUTHOR>>
 <<BOOKAUTHOR>>
 <<READBOOK>>
-<<WARNINGS table>>
 @
 
 \section{Entities and Relations}
@@ -129,15 +128,8 @@ are often names, and with international email addresses, these may be rather
 long. The length is indeterminate, so rather than truncating names or
 biographies, the maximum character length is permited for each string.
 
-<<USER>>=
-CREATE TABLE USER (
-Email VARCHAR(21,844) CHARACTER SET utf8 PRIMARY KEY,
-DateAdded DATETIME NOT NULL,
-NickName VARCHAR(21,844) CHARACTER SET utf8 UNIQUE,
-Profile VARCHAR(21,844) CHARACTER SET utf8);
--- Ensure email addresses are valid
-<<Ensure email addresses are valid>>
-@
+Any email address that does not contain an [[@]] character between a ``local
+part'' and a ``domain part'' is invalid.
 
 From the perspective of a software engineer, almost any string is a valid
 international email address. ASCII-only email addresses are also quite complex!
@@ -163,28 +155,13 @@ also occurred, what remains is to insert the email address into the database and
 check that it has an @ sign in the string, at \textit{minimum} (or
 \textit{maximum}, depending on personal engineering perspective).
 
-<<Ensure email addresses are valid>>=
-<<Define a server function to be triggered whenever a new user is created>>
-<<Whenever a user is created, call the defined function to validate email addresses>>
+<<USER>>=
+CREATE TABLE USER (
+Email VARCHAR(21,844) CHARACTER SET utf8 PRIMARY KEY CHECK Email LIKE "%@%",
+DateAdded DATETIME NOT NULL,
+NickName VARCHAR(21,844) CHARACTER SET utf8 UNIQUE,
+Profile VARCHAR(21,844) CHARACTER SET utf8);
 @
-
-Performing the check is simple; query all user email addresses, and any that are
-invalid should be logged to a [[<<WARNINGS table>>]] for database administrator
-review.
-
-<<Define a server function to be triggered whenever a new user is created>>=
-@
-
-Any email address that does not contain an [[@]] character between a ``local
-part'' and a ``domain part'' is invalid.
-
-<<Whenever a user is created, call the defined function to validate email addresses>>=
-SELECT Email from USER.Email WHERE Email NOT LIKE "%@%";
-@
-
-<<WARNINGS table>>=
-
-@ 
 
 \subsection{BOOK is an entity}
 <<BOOK>>=
