@@ -231,11 +231,27 @@ Ergo, a trigger should be implemented to delete the records [[WHERE
 READBOOK.Email = USER.Email]] whenever the trigger condition is satisfied.
 
 <<READBOOK>>=
-  CREATE TABLE READBOOK (
-    BookID INT FOREIGN KEY REFERENCES BOOK(BookID) NOT NULL,
-    Email VARCHAR(...) FOREIGN KEY REFERENCES USER(Email) NOT NULL,
-    DateRead DATE NOT NULL,
-    Rating INT(2) CHECK Rating >= 1 AND Rating <= 10 NOT NULL,
-    PRIMARY KEY (BookID, Email)) ENGINE=INNODB;
+CREATE TABLE READBOOK (
+  BookID INT FOREIGN KEY REFERENCES BOOK(BookID) NOT NULL,
+  Email VARCHAR(...) FOREIGN KEY REFERENCES USER(Email) NOT NULL ON DELETE CASCADE,
+  DateRead DATE NOT NULL,
+  Rating INT(2) CHECK Rating >= 1 AND Rating <= 10 NOT NULL,
+  PRIMARY KEY (BookID, Email)) ENGINE=INNODB;
+
+<<Update ratings in a BOOK on UPDATE>>
 @ 
+
+\href{https://sqldocs.org/sqlite/sqlite-foreign-keys/}{Ray Ferrell} explains in
+the linked blog how to make changes to a foreign key's referent domain propagate
+(cascade) to the referring (child) table. This eliminates the need to
+programmatically delete rows in the table when the referent is updated, and
+instead the SQL server and supporting engines do the work for us. The only
+remaining task is to then trigger a call to the user-defined [[CalculateRating]]
+aggregate function to update `BOOK.Rating` when this table is updated.
+
+<<Update ratings in BOOK on UPDATE>>=
+CREATE TRIGGER afterUpdateRow_recalculateBookRating AFTER UPDATE ON READBOOK FOR EACH ROW CalculateRating();
+CREATE TRIGGER afterInsertRow_recalculateBookRating AFTER INSERT ON READBOOK FOR EACH ROW CalculateRating();
+CREATE TRIGGER afterDeleteRow_recalculateBookRating AFTER DELETE ON READBOOK FOR EACH ROW CalculateRating();
+@
 \end{document}
