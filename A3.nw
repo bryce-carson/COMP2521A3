@@ -113,8 +113,23 @@ The file is not too complex.
 @
 
 \subsection{The USER table, or why email address validation is difficult for amateurs}
+\href{https://mariadb.com/kb/en/varchar/}{MariaDB VARCHAR} data types support
+different character sets; the UTF-8 character set, which is used for
+international email addresses, has a maximum length of 21,844 characters in a
+VARCHAR attribute. Given that, email addresses, nick names, and profiles should
+each be constrained to this limit.
+
+A profile, or biography, is usually longer than a person's name. Email addresses
+are often names, and with international email addresses, these may be rather
+long. The length is indeterminate, so rather than truncating names or
+biographies, the maximum character length is permited for each string.
+
 <<USER>>=
-CREATE TABLE USER(PRIMARY KEY Email, DateAdded, NickName, Profile);
+CREATE TABLE USER (
+Email VARCHAR(21,844) CHARACTER SET utf8 PRIMARY KEY,
+DateAdded DATETIME NOT NULL,
+NickName VARCHAR(21,844) CHARACTER SET utf8 UNIQUE,
+Profile VARCHAR(21,844) CHARACTER SET utf8);
 -- Ensure email addresses are valid
 <<Ensure email addresses are valid>>
 @
@@ -153,7 +168,13 @@ invalid should be logged to a [[<<WARNINGS table>>]] for database administrator
 review.
 
 <<Define a server function to be triggered whenever a new user is created>>=
+@
+
+Any email address that does not contain an [[@]] character between a ``local
+part'' and a ``domain part'' is invalid.
+
 <<Whenever a user is created, call the defined function to validate email addresses>>=
+SELECT Email from USER.Email WHERE Email NOT LIKE "%@%";
 @
 
 <<WARNINGS table>>=
