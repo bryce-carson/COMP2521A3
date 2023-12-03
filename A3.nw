@@ -112,7 +112,12 @@ The file is not too complex.
 <<WARNINGS table>>
 @
 
-\subsection{The USER table, or why email address validation is difficult for amateurs}
+\section{Entities and Relations}
+The business rules of the database are not complex, and can be stated in few
+words. The names of the sections that follow state the rules. Further
+explanation is given in the body text of a section if necessary.
+
+\subsection{USER is an entity}
 \href{https://mariadb.com/kb/en/varchar/}{MariaDB VARCHAR} data types support
 different character sets; the UTF-8 character set, which is used for
 international email addresses, has a maximum length of 21,844 characters in a
@@ -181,9 +186,7 @@ SELECT Email from USER.Email WHERE Email NOT LIKE "%@%";
 
 @ 
 
-\section{TODO: document this section}
-This section needs documentation.
-
+\subsection{BOOK is an entity}
 <<BOOK>>=
   CREATE TABLE BOOK (
     BookID INT PRIMARY KEY AUTO_INCREMENT,
@@ -192,6 +195,9 @@ This section needs documentation.
     NumRaters INT DEFAULT 0,
     Rating DECIMARL(2,1) DEFAULT 0.0 CHECK (Rating >= 0.0 AND Rating <= 5.0)
   );
+@
+
+\subsection{AUTHOR is an entity}
 <<AUTHOR>>=
   CREATE TABLE AUTHOR (
     AuthorID INT PRIMARY KEY AUTO_INCREMENT,
@@ -199,6 +205,11 @@ This section needs documentation.
     FirstName VARChar(50) NOT NULL,
     MiddleName VARCHAR(50)
   );
+@
+
+\subsection{BOOK has AUTHOR}
+Books have one or more authors. This
+
 <<BOOKAUTHOR>>=
   CREATE TABLE BOOKAUTHOR (
     AuthorID INT FOREIGN KEY REFERENCES AUTHOR(AuthorID),
