@@ -238,7 +238,7 @@ CREATE TABLE READBOOK (
   Rating INT(2) CHECK Rating >= 1 AND Rating <= 10 NOT NULL,
   PRIMARY KEY (BookID, Email)) ENGINE=INNODB;
 
-<<Update ratings in a BOOK on UPDATE>>
+<<Update ratings in a BOOK on changes to BOOKTABLE>>
 @ 
 
 \href{https://sqldocs.org/sqlite/sqlite-foreign-keys/}{Ray Ferrell} explains in
@@ -249,7 +249,7 @@ instead the SQL server and supporting engines do the work for us. The only
 remaining task is to then trigger a call to the user-defined [[CalculateRating]]
 aggregate function to update `BOOK.Rating` when this table is updated.
 
-<<Update ratings in BOOK on UPDATE>>=
+<<Update ratings in BOOK on changes to BOOKTABLE>>=
 CREATE TRIGGER afterUpdateRow_recalculateBookRating AFTER UPDATE ON READBOOK FOR EACH ROW CalculateRating();
 CREATE TRIGGER afterInsertRow_recalculateBookRating AFTER INSERT ON READBOOK FOR EACH ROW CalculateRating();
 CREATE TRIGGER afterDeleteRow_recalculateBookRating AFTER DELETE ON READBOOK FOR EACH ROW CalculateRating();
