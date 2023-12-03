@@ -181,7 +181,9 @@ SELECT Email from USER.Email WHERE Email NOT LIKE "%@%";
 
 @ 
 
-\section{TODO}
+\section{TODO: document this section}
+This section needs documentation.
+
 <<BOOK>>=
   CREATE TABLE BOOK (
     BookID INT PRIMARY KEY AUTO_INCREMENT,
@@ -202,10 +204,21 @@ SELECT Email from USER.Email WHERE Email NOT LIKE "%@%";
     AuthorID INT FOREIGN KEY REFERENCES AUTHOR(AuthorID),
     BookID INT FOREIGN KEY REFERENCES BOOK(BookID)
   );
+@
+
+\begin{quote}
+  When a user is deleted, all the READBOOK records associated with the user must
+  also be deleted.
+\end{quote}
+
+Ergo, a trigger should be implemented to delete the records [[WHERE
+READBOOK.Email = USER.Email]] whenever the trigger condition is satisfied.
+
 <<READBOOK>>=
   CREATE TABLE READBOOK (
     BookID INT FOREIGN KEY REFERENCES BOOK(BookID),
     Email VARCHAR(...) FOREIGN KEY REFERENCES USER(Email)
   );
 @ 
+\section{TODO}
 \end{document}
