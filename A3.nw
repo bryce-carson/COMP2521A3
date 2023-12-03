@@ -142,11 +142,11 @@ Profile VARCHAR(21,844) CHARACTER SET utf8);
 From the perspective of a software engineer, almost any string is a valid
 international email address. ASCII-only email addresses are also quite complex!
 A great video of a presentation on the topic is available
-\href{https://www.youtube.com/watch?v=mrGfahzt-4Q}{here on YouTube} (the presentation was
-given by Dylan Beattie at NDC~\{~Oslo~\}). More technical information is
-contained in \href{https://ia902802.us.archive.org/10/items/uasg012endigital/UASG012-en-digital.pdf}{this
-  archived}
-document from the Universal Acceptance Steering Group of ICANN.
+\href{https://www.youtube.com/watch?v=mrGfahzt-4Q}{here on YouTube} (the
+presentation was given by Dylan Beattie at NDC~\{~Oslo~\}). More technical
+information is contained in
+\href{https://ia902802.us.archive.org/10/items/uasg012endigital/UASG012-en-digital.pdf}{this
+  archived} document from the Universal Acceptance Steering Group of ICANN.
 
 \begin{quote}
   In some cases it may be useful to assign both an EAI and a legacy address for a
@@ -191,11 +191,26 @@ SELECT Email from USER.Email WHERE Email NOT LIKE "%@%";
   CREATE TABLE BOOK (
     BookID INT PRIMARY KEY AUTO_INCREMENT,
     Title VARCHAR(255) NOT NULL,
-    Year INT CHECK (Year >= 1000 AND Year <= 9999),
+    Year INT CHECK (Year >= <<date of the Kish Tablet>> AND Year <= <<the current year>>),
     NumRaters INT DEFAULT 0,
     Rating DECIMARL(2,1) DEFAULT 0.0 CHECK (Rating >= 0.0 AND Rating <= 5.0)
   );
 @
+
+Users obviously cannot read books that have not been written yet, so [[<<the
+current year>>]] is used to limit what can be inserted into the database.
+
+<<the current year>>=
+YEAR(CURDATE())
+@ 
+
+\href{https://www.oldest.org/artliterature/writing/}{The Kish Tablet} is
+believed to date from 3500 BCE. It is likely the oldest confirmed writing known,
+so any books a user claims to have read should be more recent than this.
+
+<<date of the Kish Tablet>>=
+-3500
+@ 
 
 \subsection{AUTHOR is an entity}
 <<AUTHOR>>=
