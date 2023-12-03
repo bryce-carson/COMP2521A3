@@ -206,6 +206,11 @@ This section needs documentation.
   );
 @
 
+\subsection{USER reads BOOK}
+Users can read many books, so necessarily the Email address in a READBOOK should
+not be unique. This will lead to an excessive amount of storage usage, but this
+is the specification given in the database design (by our instructor).
+
 \begin{quote}
   When a user is deleted, all the READBOOK records associated with the user must
   also be deleted.
@@ -216,9 +221,10 @@ READBOOK.Email = USER.Email]] whenever the trigger condition is satisfied.
 
 <<READBOOK>>=
   CREATE TABLE READBOOK (
-    BookID INT FOREIGN KEY REFERENCES BOOK(BookID),
-    Email VARCHAR(...) FOREIGN KEY REFERENCES USER(Email)
+    BookID INT FOREIGN KEY REFERENCES BOOK(BookID) NOT NULL,
+    Email VARCHAR(...) FOREIGN KEY REFERENCES USER(Email) NOT NULL,
+    DateRead DATE NOT NULL,
+    Rating INT(2) CHECK Rating >= 1 AND Rating <= 10 NOT NULL
   );
 @ 
-\section{TODO}
 \end{document}
