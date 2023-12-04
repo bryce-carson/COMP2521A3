@@ -103,7 +103,7 @@ Overall, the SQL script to create the databse is outlined.
 
 <<A3.sql>>=
 <<DDL: tables>>
-@ 
+@
 
 The file is not too complex.
 
@@ -189,7 +189,7 @@ the database.
 
 <<the current year>>=
 YEAR(CURDATE())
-@ 
+@
 
 \href{https://www.oldest.org/artliterature/writing/}{The Kish Tablet} is
 believed to date from 3500 BCE. It is likely the oldest confirmed writing known,
@@ -197,7 +197,7 @@ so any books a user claims to have read should be more recent than this.
 
 <<date of the Kish Tablet>>=
 -3500
-@ 
+@
 
 \subsection{AUTHOR is an entity}
 <<AUTHOR>>=
@@ -242,7 +242,7 @@ CREATE TABLE READBOOK (
 ) ENGINE=INNODB;
 
 <<Update ratings in BOOK on changes to READBOOK>>
-@ 
+@
 
 \href{https://sqldocs.org/sqlite/sqlite-foreign-keys/}{Ray Ferrell} explains in
 the linked blog how to make changes to a foreign key's referent domain propagate
@@ -262,12 +262,16 @@ CREATE TRIGGER afterInsertRow_recalculateBookRating
 CREATE TRIGGER afterDeleteRow_recalculateBookRating
     AFTER DELETE ON READBOOK FOR EACH ROW CalculateRating();
 
-CREATE OR REPLACE PROCEDURE CalculateRating     
-    AS BEGIN        
-    UPDATE BOOK       
-    SET Rating = (SELECT AVG(Rating) FROM READBOOK WHERE BOOK.BookID = ReadBook.BookID),
-    SET NumRaters = (select COUNT(*) FROM READBOOK WHERE BOOK.BookID = ReadBook.BookID)       
-    WHERE BOOK.BookID = ReadBook.BookID;     
-    END;     
+CREATE OR REPLACE PROCEDURE CalculateRating
+    AS BEGIN
+    UPDATE BOOK
+    SET Rating = (SELECT AVG(Rating)
+                  FROM READBOOK
+                  WHERE BOOK.BookID = ReadBook.BookID),
+    SET NumRaters = (SELECT COUNT(*)
+                     FROM READBOOK
+                     WHERE BOOK.BookID = ReadBook.BookID)
+    WHERE BOOK.BookID = ReadBook.BookID;
+    END;
 @
 \end{document}
