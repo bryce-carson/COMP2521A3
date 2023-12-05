@@ -274,4 +274,55 @@ CREATE OR REPLACE PROCEDURE CalculateRating
     WHERE BOOK.BookID = ReadBook.BookID;
     END;
 @
+
+VIEWS are SQL Querys that allow a user to easily see the tables and data from the database. 
+The following views are used to check the data in the database.
+
+<<VIEWS used to check data>>=
+-- This view can be used to identify invalid users (users without an @ in their email)
+CREATE VIEW InvalidUsers AS
+SELECT Email, NickName
+FROM
+    [USER]
+WHERE
+    Email NOT LIKE '%@%';
+
+
+-- This view provides details about books, including multiple authors if applicable
+CREATE VIEW BookDetails AS
+SELECT B.BookID, B.Title, B.Year, B.NumRaters, B.Rating, GROUP_CONCAT(A.FirstName, ' ', A.MiddleName, ' ', A.Lastname) AS Authors
+FROM
+    BOOK B
+LEFT JOIN
+    BOOKAUTHOR BA ON B.BookID = BA.BookID
+LEFT JOIN
+    AUTHOR A ON BA.AuthorID = A.AuthorID
+GROUP BY
+    B.BookID, B.Title, B.Year, B.NumRaters, B.Rating;
+
+
+-- View to display books with their average ratings
+CREATE VIEW BooksAvgRatings AS
+SELECT B.BookID, B.Title, AVG(RB.Rating) AS AverageRating
+FROM
+    BOOK B
+LEFT JOIN
+    READBOOK RB ON B.BookID = RB.BookID
+GROUP BY
+    B.BookID, B.Title;
+
+
+-- This view provides statistics about users who have read and rated books
+CREATE VIEW UserBookDetails AS
+SELECT U.Email, U.NickName, COUNT(RB.BookID) AS TotalBooksRead, AVG(RB.Rating) AS AverageRating
+FROM
+    [USER] U
+LEFT JOIN
+    READBOOK RB ON U.Email = RB.Email
+GROUP BY
+    U.Email, U.NickName;
+
+
+
+
 \end{document}
