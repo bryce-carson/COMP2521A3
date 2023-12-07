@@ -243,23 +243,26 @@ CREATE TABLE BOOK (
   Year INT CHECK (Year >= <<date of the Kish Tablet>>),
   NumRaters INT DEFAULT 0,
   Rating DECIMAL(2,1) DEFAULT 0.0
-      CHECK (Rating >= 0.0 AND Rating <= 5.0)
+      CHECK (Rating BETWEEN 0.0 AND 5.0)
 );
 
 <<prevent the deletion of books>>
 @
 
-<<BOOK>>=
-CREATE OR REPLACE TRIGGER beforeCreateRow_constrainYearToPresent
-BEGIN
-IF Year > <<the current year>>
-SET Year = <<the current year>>
-END;
-@ 
-
 Users obviously cannot read books that have not been written yet, so
 [[<<the current year>>]] is used to limit what can be inserted into
 the database.
+
+<<BOOK>>=
+CREATE OR REPLACE TRIGGER beforeInsertRow_constrainYearToPresent
+BEFORE INSERT ROW
+BEGIN
+IF new.Year > <<the current year>>
+SET new.Year = <<the current year>>
+END;
+@ 
+
+The current year is obtainable with built-in date and time functions; [[CURDATE()]] returns the date in a YYYY-MM-DD format, and [[YEAR()]] extracts the date portion.
 
 <<the current year>>=
 YEAR(CURDATE())
