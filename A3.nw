@@ -160,19 +160,36 @@ also occurred, what remains is to insert the email address into the database and
 check that it has an @ sign in the string, at \textit{minimum} (or
 \textit{maximum}, depending on personal engineering perspective).
 
-<<USER>>=
-CREATE TABLE USER (
-    Email VARCHAR(21,844) CHARACTER SET utf8 PRIMARY KEY
-        CHECK Email LIKE "%@%",
-    DateAdded DATETIME NOT NULL, -- not user modifiable.
-    NickName VARCHAR(21,844) CHARACTER SET utf8 UNIQUE,
-    Profile VARCHAR(21,844) CHARACTER SET utf8
-);
+A globally usable length for variable character columns is useful; it can be
+updated in one place, if need be, and all usages will reference the same global
+constant.
 
-/* Warn database clients that deleting users is impossible manually; they must
-use the provided function. */
-<<Warn to change username using a function>>
+<<256 UTF-8 VARCHAR>>=
+VARCHAR(256) CHARACTER SET utf8
+@ 
+
+<<USER>>=
+CREATE OR REPLACE TABLE USER (
+    Email <<256 UTF-8 VARCHAR>> PRIMARY KEY CHECK (Email LIKE "%@%"),
+    DateAdded DATETIME NOT NULL, -- not user modifiable.
+    NickName <<256 UTF-8 VARCHAR>> UNIQUE,
+    Profile <<256 UTF-8 VARCHAR>>
+);
 @
+
+<<USER>>=
+CREATE OR REPLACE TRIGGER afterCreateRow_setDateAddedToNow
+BEGIN
+UPDATE USER
+SET DateAdded = CURDATE();
+END;
+
+CREATE OR REPLACE TRIGGER afterUpdateRow_preventDateAddedModification
+BEGIN
+UPDATE USER
+SET new.DateAdded = old.DateAdded
+END;
+@ 
 
 \subsubsection{Change email procedure}
 The control model for this database states that email, being the primary key,
@@ -184,8 +201,9 @@ attempts to delete a user, some DCL should be used to prevent the deletion, warn
 the database user, and inform them to use the provided function which will do
 the work for them.
 
-<<Warn to change username using a function>>=
-
+<<USER>>=
+/* Warn database clients that deleting users is impossible manually; they must
+use the provided function. */
 @ 
 
 Another convenience would be to automatically add the READBOOK relations back to
@@ -202,8 +220,8 @@ would be nice; this can perhaps be accomplished with a VIEW or a query result.
 \end{quote}
 
 <<>>=
-/* TODO: implement the behaviour/functionality described in the paragraphing of
-this subsubseciton. */
+/* TODO: implement the behaviour/functionality described in
+the paragraphing of this subsubseciton. */
 @ 
 
 \subsection{BOOK is an entity}
@@ -215,9 +233,10 @@ To prevent books from being deleted, some DCL will be necessary.
 <<BOOK>>=
 CREATE TABLE BOOK (
   BookID INT PRIMARY KEY AUTO_INCREMENT,
-  Title VARCHAR(255) NOT NULL,
-  Year INT CHECK (Year >= <<date of the Kish Tablet>> AND
-                  Year <= <<the current year>>),
+  Title <<256 UTF-8 VARCHAR>> NOT NULL,
+  -- Year is additionally constrained by a trigger to be
+  -- <= YEAR(CURDATE()).
+  Year INT CHECK (Year >= <<date of the Kish Tablet>>),
   NumRaters INT DEFAULT 0,
   Rating DECIMAL(2,1) DEFAULT 0.0
       CHECK (Rating >= 0.0 AND Rating <= 5.0)
@@ -225,6 +244,14 @@ CREATE TABLE BOOK (
 
 <<prevent the deletion of books>>
 @
+
+<<BOOK>>=
+CREATE OR REPLACE TRIGGER beforeCreateRow_constrainYearToPresent
+BEGIN
+IF Year > <<the current year>>
+SET Year = <<the current year>>
+END;
+@ 
 
 Users obviously cannot read books that have not been written yet, so
 [[<<the current year>>]] is used to limit what can be inserted into
@@ -253,8 +280,7 @@ The following trigger was inspired by code read from \href{https://www.mssqltips
 CREATE TRIGGER beforeDeleteRow_warnClientImpossibleChange
     BEFORE DELETE ON BOOK INSTEAD OF DELETE AS
     BEGIN
-        RAISEERROR('BOOKS cannot be deleted, only updated.')
-        ROLLBACK;
+        -- NOP: TODO: implement the trigger; use rollback?
     END;
 @ 
 
@@ -262,19 +288,35 @@ CREATE TRIGGER beforeDeleteRow_warnClientImpossibleChange
 <<AUTHOR>>=
 CREATE TABLE AUTHOR (
     AuthorID INT PRIMARY KEY AUTO_INCREMENT,
-    Lastname VARCHAR(256) CHARACTER SET utf8,
-    FirstName VARChar(256) CHARACTER SET utf8 NOT NULL,
-    MiddleName VARCHAR(256) CHARACTER SET utf8
+    FirstName <<256 UTF-8 VARCHAR>> NOT NULL,
+    MiddleName <<256 UTF-8 VARCHAR>>,
+    Lastname <<256 UTF-8 VARCHAR>>
 );
 @
 
 \subsection{BOOK has AUTHOR}
 <<BOOKAUTHOR>>=
 CREATE TABLE BOOKAUTHOR (
-    AuthorID INT FOREIGN KEY REFERENCES AUTHOR(AuthorID),
-    BookID INT FOREIGN KEY REFERENCES BOOK(BookID)
+    AuthorID INT,
+    BookID INT
 );
 @
+
+<<BOOKAUTHOR>>=
+ALTER TABLE BOOKAUTHOR DROP PRIMARY KEY;
+
+-- Composite primary key composed of foreign keys:
+ALTER TABLE BOOKAUTHOR ADD CONSTRAINT
+    PRIMARY KEY (AuthorID, BookID);
+
+ALTER TABLE BOOKAUTHOR ADD CONSTRAINT
+FOREIGN KEY (AuthorID) REFERENCES AUTHOR (AuthorID)
+ON DELETE CASCADE;
+
+-- Books cannot be deleted, so do not permit cascading.
+ALTER TABLE BOOKAUTHOR ADD CONSTRAINT
+FOREIGN KEY (BookID) REFERENCES BOOK (BookID);
+@ 
 
 \subsection{USER reads BOOK}
 Users can read many books, so necessarily the Email address in a READBOOK should
@@ -293,12 +335,12 @@ READBOOK.Email = USER.Email]] whenever the trigger condition is satisfied.
 
 <<READBOOK>>=
 CREATE TABLE READBOOK (
-    BookID INT FOREIGN KEY REFERENCES BOOK(BookID) NOT NULL,
-    <<email domain>>,
+    BookID INT NOT NULL FOREIGN KEY REFERENCES BOOK(BookID),
+    <<email>>,
+    -- Constaint DateRead to be less than YEAR(CURDATE()).
     DateRead DATE NOT NULL,
-    Rating INT(2) <<ensure rating valid>> NOT NULL,
-    PRIMARY KEY (BookID, Email)
-    ) ENGINE=INNODB;
+    Rating INT(2) NOT NULL <<ensure rating valid>>)
+    ENGINE=INNODB;
 
 -- Include the following code
 <<Update ratings in BOOK on changes to READBOOK>>
@@ -308,7 +350,7 @@ Ratings must be constrained between one and ten, but this can be accomplished
 with a [[CHECK]] rather than a constraint.
 
 <<ensure rating valid>>=
-CHECK Rating >= 1 AND Rating <= 10
+CHECK (Rating >= 1 AND Rating <= 10)
 @ 
 
 \href{https://sqldocs.org/sqlite/sqlite-foreign-keys/}{Ray Ferrell} explains in
@@ -317,19 +359,15 @@ the linked blog how to make changes to a foreign key's referent domain propagate
 programmatically delete rows in the table when the referent is updated, and
 instead the SQL server and supporting engines do the work for us.
 
-<<email domain>>=
-Email <<variable character type>> FOREIGN KEY REFERENCES USER(Email)
-NOT NULL
-ON DELETE CASCADE
+<<email>>=
+Email <<256 UTF-8 VARCHAR>> NOT NULL
+    FOREIGN KEY REFERENCES USER(Email)
+    ON DELETE CASCADE
 @ 
 
-\begin{quote}
-  FIXME: ``I am personally confused by this syntax, so for now I have busted it out,
-  while I ask Zyrell about it.'' ⸺ Bryce
-\end{quote}
-
-<<variable character type>>=
-VARCHAR(...)
+<<READBOOK>>=
+ALTER TABLE READBOOK ADD CONSTRAINT
+PRIMARY KEY (BookID, Email);
 @ 
 
 The only remaining task is to trigger a call to the user-defined
@@ -361,11 +399,11 @@ CREATE OR REPLACE PROCEDURE CalculateRating
     UPDATE BOOK
     SET Rating = (SELECT AVG(Rating)
                   FROM READBOOK
-                  WHERE BOOK.BookID = ReadBook.BookID),
+                  WHERE BOOK.BookID = READBOOK.BookID),
     SET NumRaters = (SELECT COUNT(*)
                      FROM READBOOK
-                     WHERE BOOK.BookID = ReadBook.BookID)
-    WHERE BOOK.BookID = ReadBook.BookID;
+                     WHERE BOOK.BookID = READBOOK.BookID)
+    WHERE BOOK.BookID = READBOOK.BookID;
     END;
 @ 
 
