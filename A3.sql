@@ -6,22 +6,31 @@ CREATE OR REPLACE TABLE USER (
     Profile VARCHAR(256) CHARACTER SET utf8
 );
 
--- FIXME: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'END' at line 1
 CREATE OR REPLACE TRIGGER afterInsertRow_setDateAddedToNow
-AFTER INSERT ROW
-BEGIN
-UPDATE USER
-SET new.DateAdded = CURDATE();
-END;
+AFTER INSERT
+ON `USER`
+FOR EACH ROW -- See MariaDB specifics on row and statement orientation.
+UPDATE `USER`
+SET NEW.DateAdded = CURRENT_TIMESTAMP();
 
--- Untested
 CREATE OR REPLACE TRIGGER afterUpdateRow_preventDateAddedModification
-BEGIN
-UPDATE USER
-SET new.DateAdded = old.DateAdded
-END;
+BEFORE UPDATE
+ON `USER`
+FOR EACH ROW
+UPDATE `USER` SET NEW.DateAdded = OLD.DateAdded;
+
 /* Warn database clients that deleting users is impossible manually; they must
 use the provided function. */
+CREATE OR REPLACE TRIGGER beforeDeleteRow_signalErrorUseProcedure
+BEFORE DELETE
+ON `USER`
+FOR EACH ROW
+-- Make use of the behaviour of trigger errors to prevent the row deletion.
+-- https://mariadb.com/kb/en/trigger-overview/#trigger-errors
+-- https://mariadb.com/kb/en/signal/
+SIGNAL SQLSTATE '45000' SET
+MESSAGE_TEXT = 'Users must not be deleted manually; use the DELETE_USER() procedure';
+
 CREATE TABLE BOOK (
   BookID INT PRIMARY KEY AUTO_INCREMENT,
   Title VARCHAR(256) CHARACTER SET utf8 NOT NULL,
@@ -33,14 +42,17 @@ CREATE TABLE BOOK (
       CHECK (Rating BETWEEN 0.0 AND 5.0)
 );
 
--- See https://www.mssqltips.com/sqlservertip/2711/different
--- -ways-to-make-a-table-read-only-in-a-sql-server-database/
--- for source of inspiration.
-CREATE TRIGGER beforeDeleteRow_warnClientImpossibleChange
-    BEFORE DELETE ON BOOK INSTEAD OF DELETE AS
-    BEGIN
-        -- NOP: TODO: implement the trigger; use rollback?
-    END;
+/* Warn database clients that deleting users is impossible manually; they must
+use the provided function. */
+CREATE OR REPLACE TRIGGER beforeDeleteRow_signalErrorImpossible
+BEFORE DELETE
+ON `BOOK`
+FOR EACH ROW
+-- Make use of the behaviour of trigger errors to prevent the row deletion.
+-- https://mariadb.com/kb/en/trigger-overview/#trigger-errors
+-- https://mariadb.com/kb/en/signal/
+SIGNAL SQLSTATE '45000' SET
+MESSAGE_TEXT = 'Deleting books is prohibited.';
 CREATE OR REPLACE TRIGGER beforeInsertRow_constrainYearToPresent
 BEFORE INSERT ROW
 BEGIN

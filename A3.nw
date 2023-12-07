@@ -180,20 +180,19 @@ CREATE OR REPLACE TABLE USER (
 @
 
 <<USER>>=
--- FIXME: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'END' at line 1
 CREATE OR REPLACE TRIGGER afterInsertRow_setDateAddedToNow
-AFTER INSERT ROW
-BEGIN
-UPDATE USER
-SET new.DateAdded = CURDATE();
-END;
+AFTER INSERT
+ON `USER`
+FOR EACH ROW -- See MariaDB specifics on row and statement orientation.
+UPDATE `USER`
+SET NEW.DateAdded = CURRENT_TIMESTAMP();
 
--- Untested
 CREATE OR REPLACE TRIGGER afterUpdateRow_preventDateAddedModification
-BEGIN
-UPDATE USER
-SET new.DateAdded = old.DateAdded
-END;
+BEFORE UPDATE
+ON `USER`
+FOR EACH ROW
+UPDATE `USER` SET NEW.DateAdded = OLD.DateAdded;
+
 @ 
 
 \subsubsection{Change email procedure}
@@ -209,6 +208,20 @@ the work for them.
 <<USER>>=
 /* Warn database clients that deleting users is impossible manually; they must
 use the provided function. */
+CREATE OR REPLACE TRIGGER beforeDeleteRow_signalErrorUseProcedure
+BEFORE DELETE
+ON `USER`
+FOR EACH ROW
+-- Make use of the behaviour of trigger errors to prevent the row deletion.
+-- https://mariadb.com/kb/en/trigger-overview/#trigger-errors
+-- https://mariadb.com/kb/en/signal/
+SIGNAL SQLSTATE '45000' SET
+MESSAGE_TEXT = <<Warn client deleting users prohibited>>;
+
+@ 
+
+<<Warn client deleting users prohibited>>=
+'Users must not be deleted manually; use the DELETE_USER() procedure'
 @ 
 
 Another convenience would be to automatically add the READBOOK relations back to
@@ -263,7 +276,9 @@ SET new.Year = <<the current year>>
 END;
 @ 
 
-The current year is obtainable with built-in date and time functions; [[CURDATE()]] returns the date in a YYYY-MM-DD format, and [[YEAR()]] extracts the date portion.
+The current year is obtainable with built-in date and time functions;
+[[CURDATE()]] returns the date in a YYYY-MM-DD format, and [[YEAR()]] extracts
+the date portion.
 
 <<the current year>>=
 YEAR(CURDATE())
@@ -282,14 +297,21 @@ Further, we must [[<<prevent the deletion of books>>]], so we require a new trig
 The following trigger was inspired by code read from \href{https://www.mssqltips.com/sqlservertip/2711/different-ways-to-make-a-table-read-only-in-a-sql-server-database/}{MSSQLTips}.
 
 <<prevent the deletion of books>>=
--- See https://www.mssqltips.com/sqlservertip/2711/different
--- -ways-to-make-a-table-read-only-in-a-sql-server-database/
--- for source of inspiration.
-CREATE TRIGGER beforeDeleteRow_warnClientImpossibleChange
-    BEFORE DELETE ON BOOK INSTEAD OF DELETE AS
-    BEGIN
-        -- NOP: TODO: implement the trigger; use rollback?
-    END;
+/* Warn database clients that deleting users is impossible manually; they must
+use the provided function. */
+CREATE OR REPLACE TRIGGER beforeDeleteRow_signalErrorImpossible
+BEFORE DELETE
+ON `BOOK`
+FOR EACH ROW
+-- Make use of the behaviour of trigger errors to prevent the row deletion.
+-- https://mariadb.com/kb/en/trigger-overview/#trigger-errors
+-- https://mariadb.com/kb/en/signal/
+SIGNAL SQLSTATE '45000' SET
+MESSAGE_TEXT = <<Warn client deleting books prohibited>>;
+@ 
+
+<<Warn client deleting books prohibited>>=
+'Deleting books is prohibited.'
 @ 
 
 \subsection{AUTHOR is an entity}
@@ -470,5 +492,15 @@ LEFT JOIN
 GROUP BY
     U.Email, U.NickName;
 @
+
+\section{Testing}
+<<Test USER>>=
+INSERT INTO `USER` VALUES ("bcars268@mtroyal.ca", CURRENT_TIMESTAMP(), NULL, NULL);
+SELECT * FROM `USER`;
+DELETE FROM `USER` WHERE `USER`.Email Like "%mtroyal.ca";
+SELECT * FROM `USER`;
+
+INSERT INTO `BOOK`('𒀱', -1500, NULL, NULL);
+@ 
 
 \end{document}
