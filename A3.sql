@@ -1,15 +1,19 @@
+-- DONE: creating the table works.
 CREATE OR REPLACE TABLE USER (
     Email VARCHAR(256) CHARACTER SET utf8 PRIMARY KEY CHECK (Email LIKE "%@%"),
     DateAdded DATETIME NOT NULL, -- not user modifiable.
     NickName VARCHAR(256) CHARACTER SET utf8 UNIQUE,
     Profile VARCHAR(256) CHARACTER SET utf8
 );
+
+-- FIXME: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'END' at line 1
 CREATE OR REPLACE TRIGGER afterCreateRow_setDateAddedToNow
 BEGIN
 UPDATE USER
 SET DateAdded = CURDATE();
 END;
 
+-- Untested
 CREATE OR REPLACE TRIGGER afterUpdateRow_preventDateAddedModification
 BEGIN
 UPDATE USER
