@@ -29,7 +29,7 @@ CREATE TABLE BOOK (
   Year INT CHECK (Year >= -3500),
   NumRaters INT DEFAULT 0,
   Rating DECIMAL(2,1) DEFAULT 0.0
-      CHECK (Rating >= 0.0 AND Rating <= 5.0)
+      CHECK (Rating BETWEEN 0.0 AND 5.0)
 );
 
 -- See https://www.mssqltips.com/sqlservertip/2711/different
@@ -40,10 +40,11 @@ CREATE TRIGGER beforeDeleteRow_warnClientImpossibleChange
     BEGIN
         -- NOP: TODO: implement the trigger; use rollback?
     END;
-CREATE OR REPLACE TRIGGER beforeCreateRow_constrainYearToPresent
+CREATE OR REPLACE TRIGGER beforeInsertRow_constrainYearToPresent
+BEFORE INSERT ROW
 BEGIN
-IF Year > YEAR(CURDATE())
-SET Year = YEAR(CURDATE())
+IF new.Year > YEAR(CURDATE())
+SET new.Year = YEAR(CURDATE())
 END;
 CREATE TABLE AUTHOR (
     AuthorID INT PRIMARY KEY AUTO_INCREMENT,
