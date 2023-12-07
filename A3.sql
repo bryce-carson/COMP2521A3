@@ -7,10 +7,11 @@ CREATE OR REPLACE TABLE USER (
 );
 
 -- FIXME: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'END' at line 1
-CREATE OR REPLACE TRIGGER afterCreateRow_setDateAddedToNow
+CREATE OR REPLACE TRIGGER afterInsertRow_setDateAddedToNow
+AFTER INSERT ROW
 BEGIN
 UPDATE USER
-SET DateAdded = CURDATE();
+SET new.DateAdded = CURDATE();
 END;
 
 -- Untested
