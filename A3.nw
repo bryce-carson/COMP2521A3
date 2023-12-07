@@ -164,13 +164,54 @@ check that it has an @ sign in the string, at \textit{minimum} (or
 CREATE TABLE USER (
     Email VARCHAR(21,844) CHARACTER SET utf8 PRIMARY KEY
         CHECK Email LIKE "%@%",
-    DateAdded DATETIME NOT NULL,
+    DateAdded DATETIME NOT NULL, -- not user modifiable.
     NickName VARCHAR(21,844) CHARACTER SET utf8 UNIQUE,
     Profile VARCHAR(21,844) CHARACTER SET utf8
 );
+
+/* Warn database clients that deleting users is impossible manually; they must
+use the provided function. */
+<<Warn to change username using a function>>
 @
 
+\subsubsection{Change email procedure}
+The control model for this database states that email, being the primary key,
+cannot be changed. To change the email address of a user, the user must be
+deleted (all with all their associated READBOOK records) before creating a new
+user with the desired email address. It would be nice to encapsulate this
+behaviour into a function to make it more reliable. When a user of the database
+attempts to delete a user, some DCL should be used to prevent the deletion, warn
+the database user, and inform them to use the provided function which will do
+the work for them.
+
+<<Warn to change username using a function>>=
+
+@ 
+
+Another convenience would be to automatically add the READBOOK relations back to
+the new user, so that their user data isn't truly lost; this quotation shows
+what must be done to enable us to delete a user, as no foreign key references
+can exist before deleting a record. We do not want to reduce referential
+integrity. If there is a way to store the information temporarily and insert it
+into the READBOOK table after deleting the old user and creating a new one, that
+would be nice; this can perhaps be accomplished with a VIEW or a query result.
+
+\begin{quote}
+  When a user is deleted all the READBOOK records associated with the user must
+  also be deleted.
+\end{quote}
+
+<<>>=
+/* TODO: implement the behaviour/functionality described in the paragraphing of
+this subsubseciton. */
+@ 
+
 \subsection{BOOK is an entity}
+To prevent books from being deleted, some DCL will be necessary.
+\begin{quote}
+  [NOTE]: Books can never be deleted.
+\end{quote}
+
 <<BOOK>>=
 CREATE TABLE BOOK (
   BookID INT PRIMARY KEY AUTO_INCREMENT,
@@ -181,6 +222,8 @@ CREATE TABLE BOOK (
   Rating DECIMAL(2,1) DEFAULT 0.0
       CHECK (Rating >= 0.0 AND Rating <= 5.0)
 );
+
+<<prevent the deletion of books>>
 @
 
 Users obviously cannot read books that have not been written yet, so
@@ -199,13 +242,29 @@ so any books a user claims to have read should be more recent than this.
 -3500
 @
 
+Further, we must [[<<prevent the deletion of books>>]], so we require a new trigger for that.
+
+The following trigger was inspired by code read from \href{https://www.mssqltips.com/sqlservertip/2711/different-ways-to-make-a-table-read-only-in-a-sql-server-database/}{MSSQLTips}.
+
+<<prevent the deletion of books>>=
+-- See https://www.mssqltips.com/sqlservertip/2711/different
+-- -ways-to-make-a-table-read-only-in-a-sql-server-database/
+-- for source of inspiration.
+CREATE TRIGGER beforeDeleteRow_warnClientImpossibleChange
+    BEFORE DELETE ON BOOK INSTEAD OF DELETE AS
+    BEGIN
+        RAISEERROR('BOOKS cannot be deleted, only updated.')
+        ROLLBACK;
+    END;
+@ 
+
 \subsection{AUTHOR is an entity}
 <<AUTHOR>>=
 CREATE TABLE AUTHOR (
     AuthorID INT PRIMARY KEY AUTO_INCREMENT,
-    Lastname VARCHAR(50) CHARACTER SET utf8,
-    FirstName VARChar(50) CHARACTER SET utf8 NOT NULL,
-    MiddleName VARCHAR(50) CHARACTER SET utf8
+    Lastname VARCHAR(256) CHARACTER SET utf8,
+    FirstName VARChar(256) CHARACTER SET utf8 NOT NULL,
+    MiddleName VARCHAR(256) CHARACTER SET utf8
 );
 @
 
@@ -225,6 +284,8 @@ is the specification given in the database design (by our instructor).
 \begin{quote}
   When a user is deleted, all the READBOOK records associated with the user must
   also be deleted.
+
+  The Rating and DateRead can bemodified.
 \end{quote}
 
 Ergo, a trigger should be implemented to delete the records [[WHERE
@@ -233,35 +294,68 @@ READBOOK.Email = USER.Email]] whenever the trigger condition is satisfied.
 <<READBOOK>>=
 CREATE TABLE READBOOK (
     BookID INT FOREIGN KEY REFERENCES BOOK(BookID) NOT NULL,
-    Email VARCHAR(...) FOREIGN KEY REFERENCES USER(Email)
-        NOT NULL
-        ON DELETE CASCADE,
+    <<email domain>>,
     DateRead DATE NOT NULL,
-    Rating INT(2) CHECK Rating >= 1 AND Rating <= 10 NOT NULL,
+    Rating INT(2) <<ensure rating valid>> NOT NULL,
     PRIMARY KEY (BookID, Email)
-) ENGINE=INNODB;
+    ) ENGINE=INNODB;
 
+-- Include the following code
 <<Update ratings in BOOK on changes to READBOOK>>
 @
+
+Ratings must be constrained between one and ten, but this can be accomplished
+with a [[CHECK]] rather than a constraint.
+
+<<ensure rating valid>>=
+CHECK Rating >= 1 AND Rating <= 10
+@ 
 
 \href{https://sqldocs.org/sqlite/sqlite-foreign-keys/}{Ray Ferrell} explains in
 the linked blog how to make changes to a foreign key's referent domain propagate
 (cascade) to the referring (child) table. This eliminates the need to
 programmatically delete rows in the table when the referent is updated, and
-instead the SQL server and supporting engines do the work for us. The only
-remaining task is to then trigger a call to the user-defined [[CalculateRating]]
-aggregate function to update `BOOK.Rating` when this table is updated.
+instead the SQL server and supporting engines do the work for us.
+
+<<email domain>>=
+Email <<variable character type>> FOREIGN KEY REFERENCES USER(Email)
+NOT NULL
+ON DELETE CASCADE
+@ 
+
+\begin{quote}
+  FIXME: ``I am personally confused by this syntax, so for now I have busted it out,
+  while I ask Zyrell about it.'' ⸺ Bryce
+\end{quote}
+
+<<variable character type>>=
+VARCHAR(...)
+@ 
+
+The only remaining task is to trigger a call to the user-defined
+[[CalculateRating]] aggregate function to update [[BOOK.Rating]] when this table
+is updated.
 
 <<Update ratings in BOOK on changes to READBOOK>>=
 CREATE TRIGGER afterUpdateRow_recalculateBookRating
-    AFTER UPDATE ON READBOOK FOR EACH ROW CalculateRating();
+    AFTER UPDATE <<recalculate rating after operation>>
 
 CREATE TRIGGER afterInsertRow_recalculateBookRating
-    AFTER INSERT ON READBOOK FOR EACH ROW CalculateRating();
+AFTER INSERT <<recalculate rating after operation>>
 
 CREATE TRIGGER afterDeleteRow_recalculateBookRating
-    AFTER DELETE ON READBOOK FOR EACH ROW CalculateRating();
+    AFTER DELETE <<recalculate rating after operation>>
 
+-- Include the following procedure after this code.
+<<Calculate Rating>>
+
+<<recalculate rating after operation>>=
+ON READBOOK FOR EACH ROW CalculateRating();
+@
+
+How [[CalculateRating()]] performs its work is now defined.
+
+<<Calculate Rating>>=
 CREATE OR REPLACE PROCEDURE CalculateRating
     AS BEGIN
     UPDATE BOOK
@@ -273,24 +367,29 @@ CREATE OR REPLACE PROCEDURE CalculateRating
                      WHERE BOOK.BookID = ReadBook.BookID)
     WHERE BOOK.BookID = ReadBook.BookID;
     END;
-@
+@ 
 
-VIEWS are SQL Querys that allow a user to easily see the tables and data from the database. 
-The following views are used to check the data in the database.
+VIEWS are SQL Querys that allow a user to easily see the tables and data from
+the database. The following views are used to check the data in the database.
 
 <<VIEWS used to check data>>=
--- This view can be used to identify invalid users (users without an @ in their email)
+/* This view can be used to identify invalid users (users
+without an @ in their email) */
 CREATE VIEW InvalidUsers AS
 SELECT Email, NickName
 FROM
-    [USER]
+    USER
 WHERE
     Email NOT LIKE '%@%';
 
 
--- This view provides details about books, including multiple authors if applicable
+/* This view provides details about books, including
+multiple authors if applicable */
 CREATE VIEW BookDetails AS
-SELECT B.BookID, B.Title, B.Year, B.NumRaters, B.Rating, GROUP_CONCAT(A.FirstName, ' ', A.MiddleName, ' ', A.Lastname) AS Authors
+SELECT B.BookID, B.Title, B.Year, B.NumRaters, B.Rating,
+       GROUP_CONCAT(A.FirstName, ' ',
+                    A.MiddleName, ' ',
+                    A.Lastname) AS Authors
 FROM
     BOOK B
 LEFT JOIN
@@ -312,17 +411,18 @@ GROUP BY
     B.BookID, B.Title;
 
 
--- This view provides statistics about users who have read and rated books
+/* This view provides statistics about users who have read
+and rated books */
 CREATE VIEW UserBookDetails AS
-SELECT U.Email, U.NickName, COUNT(RB.BookID) AS TotalBooksRead, AVG(RB.Rating) AS AverageRating
+SELECT U.Email, U.NickName,
+       COUNT(RB.BookID) AS TotalBooksRead,
+       AVG(RB.Rating) AS AverageRating
 FROM
-    [USER] U
+    USER U
 LEFT JOIN
     READBOOK RB ON U.Email = RB.Email
 GROUP BY
     U.Email, U.NickName;
-
-
-
+@
 
 \end{document}
