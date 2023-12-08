@@ -500,7 +500,7 @@ SELECT * FROM `USER`;
 DELETE FROM `USER` WHERE `USER`.Email Like "%mtroyal.ca";
 SELECT * FROM `USER`;
 
-INSERT INTO `BOOK`('ăѣ𝔠ծềſģȟᎥ𝒋ǩľḿꞑȯ𝘱𝑞𝗋𝘴ȶ𝞄𝜈ψ𝒙𝘆𝚣1234567890!@#$%^&*', -1500, NULL, NULL);
+INSERT INTO `BOOK`('𒀱', -1500, NULL, NULL);
 @ 
 
 \end{document}
