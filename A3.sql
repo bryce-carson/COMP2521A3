@@ -31,44 +31,65 @@ FOR EACH ROW
 SIGNAL SQLSTATE '45000' SET
 MESSAGE_TEXT = 'Users must not be deleted manually; use the DELETE_USER() procedure';
 
-CREATE TABLE BOOK (
-  BookID INT PRIMARY KEY AUTO_INCREMENT,
+
+
+
+CREATE OR REPLACE TABLE BOOK (
+  BookID INT AUTO_INCREMENT PRIMARY KEY,
   Title VARCHAR(256) CHARACTER SET utf8 NOT NULL,
   -- Year is additionally constrained by a trigger to be
   -- <= YEAR(CURDATE()).
   Year INT CHECK (Year >= -3500),
   NumRaters INT DEFAULT 0,
-  Rating DECIMAL(2,1) DEFAULT 0.0
-      CHECK (Rating BETWEEN 0.0 AND 5.0)
+  Rating DECIMAL(2,1) DEFAULT 0.0 CHECK (Rating BETWEEN 0.0 AND 5.0)
 );
+
+CREATE OR REPLACE TRIGGER beforeUpdateRow_preventNumRatersUpdate
+BEFORE UPDATE
+ON BOOK
+FOR EACH ROW
+UPDATE BOOK SET NEW.NumRaters = OLD.NumRaters; -- This line was added to prevent the update
+
+/*Warn database clients that Rating cannot be set. */
+CREATE OR REPLACE TRIGGER beforeUpdateRow_preventRatingsUpdate
+BEFORE UPDATE
+ON BOOK
+FOR EACH ROW
+UPDATE BOOK SET NEW.Rating = OLD.Rating; -- This line was added to prevent the update
 
 /* Warn database clients that deleting users is impossible manually; they must
 use the provided function. */
 CREATE OR REPLACE TRIGGER beforeDeleteRow_signalErrorImpossible
 BEFORE DELETE
-ON `BOOK`
+ON BOOK
 FOR EACH ROW
 -- Make use of the behaviour of trigger errors to prevent the row deletion.
 -- https://mariadb.com/kb/en/trigger-overview/#trigger-errors
 -- https://mariadb.com/kb/en/signal/
 SIGNAL SQLSTATE '45000' SET
 MESSAGE_TEXT = 'Deleting books is prohibited.';
+
 CREATE OR REPLACE TRIGGER beforeInsertRow_constrainYearToPresent
-BEFORE INSERT ROW
-BEGIN
-IF new.Year > YEAR(CURDATE())
-SET new.Year = YEAR(CURDATE())
-END;
+BEFORE INSERT 
+ON BOOK 
+FOR EACH ROW
+SET NEW.Year = IF(NEW.Year > YEAR(CURDATE()), YEAR(CURDATE()), NEW.Year);
+
+
+
+
 CREATE TABLE AUTHOR (
     AuthorID INT PRIMARY KEY AUTO_INCREMENT,
     FirstName VARCHAR(256) CHARACTER SET utf8 NOT NULL,
     MiddleName VARCHAR(256) CHARACTER SET utf8,
     Lastname VARCHAR(256) CHARACTER SET utf8
 );
+
 CREATE TABLE BOOKAUTHOR (
     AuthorID INT,
     BookID INT
 );
+
 ALTER TABLE BOOKAUTHOR DROP PRIMARY KEY;
 
 -- Composite primary key composed of foreign keys:
