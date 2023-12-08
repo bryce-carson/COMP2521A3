@@ -125,9 +125,14 @@ CREATE OR REPLACE PROCEDURE CalculateRating
    
 
 /* USER Test Data */
-INSERT INTO USER(Email,DateAdded, NickName) VALUES ("E@GMAIL.COM","2023-12-06" ,"t");
-INSERT INTO USER (Email, NickName, Profile) VALUES ("bcars268@mtroyal.ca", NULL, NULL);
-INSERT INTO USER (EMAIL,DateAdded,NICKNAME, PROFILE) VALUES ("TO@gmail.com","2023-12-06" ,"gre", NULL);
+INSERT INTO USER(Email, NickName) VALUES ("E@GMAIL.COM","t");
+INSERT INTO USER (Email, NickName, Profile) VALUES ("bcars268@mtroyal.ca", NULL, "BLAH BLAH");
+INSERT INTO USER (EMAIL,NICKNAME, PROFILE) VALUES ("TO@gmail.com" ,"gre", NULL);
+INSERT INTO USER (Email, NickName, Profile)VALUES ('john.doe@example.com', 'johnny', 'Web Developer');
+INSERT INTO USER (Email) VALUES ('alice.smith@example.com');
+INSERT INTO USER (Email, NickName) VALUES ('charlie.brown@example.com', 'charlie');
+INSERT INTO USER (Email, Profile) VALUES ('susan.jones@example.com', 'Database Administrator');
+INSERT INTO USER (Email, NickName, Profile) VALUES ('robert.jenkins@example.com', 'robby', 'Software Engineer');
 SELECT * FROM USER;
 
 /* BOOK Test Data */
