@@ -30,6 +30,25 @@ FOR EACH ROW
 -- https://mariadb.com/kb/en/signal/
 SIGNAL SQLSTATE '45000' SET
 MESSAGE_TEXT = 'Users must not be deleted manually; use the DELETE_USER() procedure';
+<<<<<<< Updated upstream
+=======
+END IF;
+
+SET @PROHIBIT_DEL_OVERRIDDEN = 0;
+
+CREATE
+OR REPLACE
+PROCEDURE DELETE_USER (IN param_email VARCHAR(256) CHARACTER SET utf8)
+MODIFIES SQL DATA
+COMMENT 'Delete a user from the database.'
+BEGIN
+DELETE FROM READBOOK WHERE READBOOK.Email = param_email;
+-- Ignore the usual trigger somehow.
+SET @PROHIBIT_DEL_NOT_OVERRIDDEN = 0;
+DELETE FROM USER WHERE USER.Email = param_email;
+SET @PROHIBIT_DEL_NOT_OVERRIDDEN = 1;
+END;
+>>>>>>> Stashed changes
 
 
 
@@ -85,10 +104,20 @@ CREATE TABLE IF NOT EXISTS AUTHOR (
     Lastname VARCHAR(256) CHARACTER SET utf8
 );
 
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+CREATE TABLE BOOKAUTHOR (
+=======
+>>>>>>> Stashed changes
 
 
 
 CREATE TABLE IF NOT EXISTS BOOKAUTHOR (
+<<<<<<< Updated upstream
+=======
+>>>>>>> origin/main
+>>>>>>> Stashed changes
     AuthorID INT,
     BookID INT,
     FOREIGN KEY (AuthorID) REFERENCES AUTHOR(AuthorID),
@@ -96,10 +125,19 @@ CREATE TABLE IF NOT EXISTS BOOKAUTHOR (
     PRIMARY KEY (AuthorID, BookID)
 );
 
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
 
 
 
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> origin/main
+>>>>>>> Stashed changes
 ALTER TABLE BOOKAUTHOR DROP PRIMARY KEY;
 
 -- Composite primary key composed of foreign keys:
