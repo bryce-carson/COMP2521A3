@@ -207,6 +207,8 @@ the database user, and inform them to use the provided function which will do
 the work for them.
 
 <<USER>>=
+SET @PROHIBIT_DEL = 1;
+
 /* Warn database clients that deleting users is impossible manually; they must
 use the provided function. */
 CREATE OR REPLACE TRIGGER beforeDeleteRow_signalErrorUseProcedure
@@ -216,7 +218,7 @@ FOR EACH ROW
 -- Make use of the behaviour of trigger errors to prevent the row deletion.
 -- https://mariadb.com/kb/en/trigger-overview/#trigger-errors
 -- https://mariadb.com/kb/en/signal/
-IF PERMIT_DEL_NOT_OVERRIDDEN THEN
+IF @PROHIBIT_DEL THEN
 SIGNAL SQLSTATE '45000' SET
 MESSAGE_TEXT = <<Warn client deleting users prohibited>>;
 END IF;
@@ -228,8 +230,6 @@ END IF;
 @ 
 
 <<USER>>=
-SET @PROHIBIT_DEL_OVERRIDDEN = 0;
-
 CREATE
 OR REPLACE
 PROCEDURE DELETE_USER (IN param_email VARCHAR(256) CHARACTER SET utf8)
@@ -237,10 +237,10 @@ MODIFIES SQL DATA
 COMMENT 'Delete a user from the database.'
 BEGIN
 DELETE FROM READBOOK WHERE READBOOK.Email = param_email;
--- Ignore the usual trigger somehow.
-SET @PROHIBIT_DEL_NOT_OVERRIDDEN = 0;
-DELETE FROM USER WHERE USER.Email = param_email;
-SET @PROHIBIT_DEL_NOT_OVERRIDDEN = 1;
+  -- Override trigger signal sentinel
+  SET @PROHIBIT_DEL = 0;
+  DELETE FROM USER WHERE USER.Email = param_email;
+  SET @PROHIBIT_DEL = 1;
 END;
 
 @ 
