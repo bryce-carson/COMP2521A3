@@ -103,6 +103,7 @@ Overall, the SQL script to create the databse is outlined.
 
 <<A3.sql>>=
 <<DDL: tables>>
+<<VIEWS used to check data>>
 @
 
 The file is not too complex.
@@ -215,13 +216,33 @@ FOR EACH ROW
 -- Make use of the behaviour of trigger errors to prevent the row deletion.
 -- https://mariadb.com/kb/en/trigger-overview/#trigger-errors
 -- https://mariadb.com/kb/en/signal/
+IF PERMIT_DEL_NOT_OVERRIDDEN THEN
 SIGNAL SQLSTATE '45000' SET
 MESSAGE_TEXT = <<Warn client deleting users prohibited>>;
+END IF;
 
 @ 
 
 <<Warn client deleting users prohibited>>=
 'Users must not be deleted manually; use the DELETE_USER() procedure'
+@ 
+
+<<USER>>=
+SET @PROHIBIT_DEL_OVERRIDDEN = 0;
+
+CREATE
+OR REPLACE
+PROCEDURE DELETE_USER (IN param_email VARCHAR(256) CHARACTER SET utf8)
+MODIFIES SQL DATA
+COMMENT 'Delete a user from the database.'
+BEGIN
+DELETE FROM READBOOK WHERE READBOOK.Email = param_email;
+-- Ignore the usual trigger somehow.
+SET @PROHIBIT_DEL_NOT_OVERRIDDEN = 0;
+DELETE FROM USER WHERE USER.Email = param_email;
+SET @PROHIBIT_DEL_NOT_OVERRIDDEN = 1;
+END;
+
 @ 
 
 Another convenience would be to automatically add the READBOOK relations back to
@@ -322,6 +343,7 @@ CREATE TABLE AUTHOR (
     MiddleName <<256 UTF-8 VARCHAR>>,
     Lastname <<256 UTF-8 VARCHAR>>
 );
+
 @
 
 \subsection{BOOK has AUTHOR}
@@ -330,6 +352,7 @@ CREATE TABLE BOOKAUTHOR (
     AuthorID INT,
     BookID INT
 );
+
 @
 
 <<BOOKAUTHOR>>=
@@ -346,6 +369,7 @@ ON DELETE CASCADE;
 -- Books cannot be deleted, so do not permit cascading.
 ALTER TABLE BOOKAUTHOR ADD CONSTRAINT
 FOREIGN KEY (BookID) REFERENCES BOOK (BookID);
+
 @ 
 
 \subsection{USER reads BOOK}
@@ -372,8 +396,6 @@ CREATE TABLE READBOOK (
     Rating INT(2) NOT NULL <<ensure rating valid>>)
     ENGINE=INNODB;
 
--- Include the following code
-<<Update ratings in BOOK on changes to READBOOK>>
 @
 
 Ratings must be constrained between one and ten, but this can be accomplished
@@ -398,12 +420,14 @@ Email <<256 UTF-8 VARCHAR>> NOT NULL
 <<READBOOK>>=
 ALTER TABLE READBOOK ADD CONSTRAINT
 PRIMARY KEY (BookID, Email);
+
 @ 
 
 The only remaining task is to trigger a call to the user-defined
 [[CalculateRating]] aggregate function to update [[BOOK.Rating]] when this table
 is updated.
 
+<<READBOOK>>=
 <<Update ratings in BOOK on changes to READBOOK>>=
 CREATE TRIGGER afterUpdateRow_recalculateBookRating
     AFTER UPDATE <<recalculate rating after operation>>
@@ -418,7 +442,7 @@ CREATE TRIGGER afterDeleteRow_recalculateBookRating
 <<Calculate Rating>>
 
 <<recalculate rating after operation>>=
-ON READBOOK FOR EACH ROW CalculateRating();
+ON READBOOK FOR EACH ROW CALL CalculateRating();
 @
 
 How [[CalculateRating()]] performs its work is now defined.
