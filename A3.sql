@@ -110,13 +110,13 @@ AFTER INSERT ON READBOOK FOR EACH ROW CalculateRating();
 CREATE OR REPLACE TRIGGER afterDeleteRow_recalculateBookRating
     AFTER DELETE ON READBOOK FOR EACH ROW CalculateRating();
 -- Include the following procedure after this code.
-CREATE OR REPLACE PROCEDURE CalculateRating
-    AS BEGIN
+CREATE OR REPLACE PROCEDURE CalculateRating()
+    BEGIN
     UPDATE BOOK
     SET Rating = (SELECT AVG(Rating)
                   FROM READBOOK
                   WHERE BOOK.BookID = READBOOK.BookID),
-    SET NumRaters = (SELECT COUNT(*)
+    SET NumRaters = (SELECT COUNT(BOOK.BookID)
                      FROM READBOOK
                      WHERE BOOK.BookID = READBOOK.BookID)
     WHERE BOOK.BookID = READBOOK.BookID;
@@ -187,3 +187,54 @@ INSERT INTO READBOOK (BookID, Email, Rating, DateRead) VALUES (6, 'TO@gmail.com'
 INSERT INTO READBOOK (BookID, Email, Rating, DateRead) VALUES (7, 'john.doe@example.com', 10, '2023-12-20');
 INSERT INTO READBOOK (BookID, Email, Rating, DateRead) VALUES (8, 'john.doe@example.com', 4, '2023-12-25');
 Select * from READBOOK;
+
+/* This view can be used to identify invalid users (users
+without an @ in their email) */
+CREATE VIEW InvalidUsers AS
+SELECT Email, NickName
+FROM
+    USER
+WHERE
+    Email NOT LIKE '%@%';
+
+
+/* This view provides details about books, including
+multiple authors if applicable */
+CREATE VIEW BookDetails AS
+SELECT B.BookID, B.Title, B.Year, B.NumRaters, B.Rating,
+       GROUP_CONCAT(A.FirstName, ' ',
+                    A.MiddleName, ' ',
+                    A.Lastname) AS Authors
+FROM
+    BOOK B
+LEFT JOIN
+    BOOKAUTHOR BA ON B.BookID = BA.BookID
+LEFT JOIN
+    AUTHOR A ON BA.AuthorID = A.AuthorID
+GROUP BY
+    B.BookID, B.Title, B.Year, B.NumRaters, B.Rating;
+
+
+-- View to display books with their average ratings
+CREATE VIEW BooksAvgRatings AS
+SELECT B.BookID, B.Title, AVG(RB.Rating) AS AverageRating
+FROM
+    BOOK B
+LEFT JOIN
+    READBOOK RB ON B.BookID = RB.BookID
+GROUP BY
+    B.BookID, B.Title;
+
+
+/* This view provides statistics about users who have read
+and rated books */
+CREATE VIEW UserBookDetails AS
+SELECT U.Email, U.NickName,
+       COUNT(RB.BookID) AS TotalBooksRead,
+       AVG(RB.Rating) AS AverageRating
+FROM
+    USER U
+LEFT JOIN
+    READBOOK RB ON U.Email = RB.Email
+GROUP BY
+    U.Email, U.NickName;
